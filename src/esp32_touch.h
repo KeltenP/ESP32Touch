@@ -1,11 +1,12 @@
 
-/** @file esp32_touch.hpp */
-#ifndef ESP32_TOUCH_HPP__
-#define ESP32_TOUCH_HPP__
+/** @file esp32_touch.h */
+#ifndef ESP32_TOUCH_H__
+#define ESP32_TOUCH_H__
 
 #include <functional>
 #include <driver/touch_pad.h>
 #include <Ticker.h>
+#include <map>
 
 // Omit this line to disable debug print output
 #define ENABLE_DEBUG_PRINT 1
@@ -52,6 +53,35 @@ using CallbackT = std::function<void(void)>;
 class ESP32Touch
 {
 public:
+
+    enum INSTANTANEOUS_BUTTON_STATE
+    {
+        PRESSED,
+        NOT_PRESSED
+    };
+
+    enum BUTTON_STATE
+    {
+        NOT_PRESSED,
+        SHORT_PRESSED,
+        MEDIUM_PRESSED,
+        LONG_PRESSED
+    };
+
+    enum BUTTON_EVENT
+    {
+        SHORT_PRESS,
+        MEDIUM_PRESS,
+        LONG_PRESS
+    };
+
+    std::map<BUTTON_EVENT, float> BUTTON_THRESHOLD_TIMES_MS
+    {
+        {SHORT_PRESS, 50},
+        {MEDIUM_PRESS, 300},
+        {LONG_PRESS, 1500}
+    };
+
     /** @brief Configure here the cycle time for the event loop/handler
      */
     static constexpr int dispatch_cycle_time_ms = 100;
@@ -79,7 +109,8 @@ public:
      */
     void configure_input(const int input_number,
                          const uint8_t threshold_percent,
-                         CallbackT callback = nullptr);
+                         CallbackT callback = nullptr,
+                         BUTTON_EVENT = SHORT_PRESS);
     
     /** @brief Force a sensor re-calibration.
      * 
@@ -112,7 +143,13 @@ private:
     static bool s_pad_is_pressed[TOUCH_PAD_MAX];
     static uint16_t s_pad_filtered_value[TOUCH_PAD_MAX];
     static uint16_t s_pad_threshold[TOUCH_PAD_MAX];
-    static CallbackT s_pad_callback[TOUCH_PAD_MAX];
+    static CallbackT s_pad_callback[TOUCH_PAD_MAX][sizeof(BUTTON_EVENT)];
+    static BUTTON_STATE s_pad_state[TOUCH_PAD_MAX];
+    static INSTANTANEOUS_BUTTON_STATE s_pad_instantaneous_state[TOUCH_PAD_MAX];
+    static long s_pad_initial_press_time[TOUCH_PAD_MAX];
+
+    void getInstantaneousButtonState(int touch_pin);
+    void updateButtonState(int touch_pin);
 
     // Filter output reading hook, see ESP-IDF file touch_pad.h
     static void filter_read_cb(uint16_t *raw_value, uint16_t *filtered_value);
