@@ -30,7 +30,7 @@ ESP32Touch::ESP32Touch()
         s_pad_threshold[i] = threshold_inactive;
         // Inizialization using the default constructor of std::function
         s_pad_callback[i][sizeof(BUTTON_EVENT)] = {};
-        s_pad_state[i] = BUTTON_STATE::NOT_PRESSED;
+        s_pad_state[i] = BUTTON_STATE::NO_PRESS;
     }
 }
 
@@ -47,7 +47,7 @@ void ESP32Touch::configure_input(const int input_number,
     s_pad_enabled[input_number] = true;
     s_pad_threshold_percent[input_number] = threshold_percent;
     s_pad_callback[input_number][buttonEvent] = callback;
-    s_pad_state[input_number] = BUTTON_STATE::NOT_PRESSED;
+    s_pad_state[input_number] = BUTTON_STATE::NO_PRESS;
 }
 
 void ESP32Touch::calibrate_thresholds() {
@@ -97,14 +97,15 @@ void ESP32Touch::diagnostics() {
 //////// ESP32Touch private:
 
 // Static members must be explicitly initialised
-uint8_t ESP32Touch::s_pad_threshold_percent[TOUCH_PAD_MAX];
-bool ESP32Touch::s_pad_enabled[TOUCH_PAD_MAX];
-bool ESP32Touch::s_pad_is_pressed[TOUCH_PAD_MAX];
-uint16_t ESP32Touch::s_pad_filtered_value[TOUCH_PAD_MAX];
-uint16_t ESP32Touch::s_pad_threshold[TOUCH_PAD_MAX];
-CallbackT ESP32Touch::s_pad_callback[TOUCH_PAD_MAX][sizeof(BUTTON_EVENT)];
-static BUTTON_EVENT s_pad_state[TOUCH_PAD_MAX];
-static long s_pad_initial_press_time[TOUCH_PAD_MAX];
+uint8_t s_pad_threshold_percent[TOUCH_PAD_MAX];
+bool s_pad_enabled[TOUCH_PAD_MAX];
+bool s_pad_is_pressed[TOUCH_PAD_MAX];
+uint16_t s_pad_filtered_value[TOUCH_PAD_MAX];
+uint16_t s_pad_threshold[TOUCH_PAD_MAX];
+CallbackT s_pad_callback[TOUCH_PAD_MAX][sizeof(ESP32Touch::BUTTON_EVENT)];
+ESP32Touch::BUTTON_STATE s_pad_state[TOUCH_PAD_MAX];
+ESP32Touch::INSTANTANEOUS_BUTTON_STATE s_pad_instantaneous_state[TOUCH_PAD_MAX];
+long s_pad_initial_press_time[TOUCH_PAD_MAX];
 
 void ESP32Touch::filter_read_cb(uint16_t *raw_value, uint16_t *filtered_value) {
     for (int i=0; i<TOUCH_PAD_MAX; ++i) {
@@ -112,36 +113,36 @@ void ESP32Touch::filter_read_cb(uint16_t *raw_value, uint16_t *filtered_value) {
     }
 }
 
-INSTANTANEOUS_BUTTON_STATE getInstantaneousButtonState(const int touch_pin)
+ESP32Touch::INSTANTANEOUS_BUTTON_STATE getInstantaneousButtonState(const int touch_pin)
 {
-    return s_pad_filtered_value[touch_pin] < s_pad_threshold[touch_pin] ? PRESSED : NOT_PRESSED;
+    return s_pad_filtered_value[touch_pin] < s_pad_threshold[touch_pin] ? ESP32Touch::PRESSED : ESP32Touch::NOT_PRESSED;
 }
 
 void updateButtonState(const int touch_pin)
 {
-    INSTANTANEOUS_BUTTON_STATE lastButtonState = s_pad_instantaneous_state[touch_pin];
-    INSTANTANEOUS_BUTTON_STATE currentButtonState = getInstantaneousButtonState(touch_pin);
+    ESP32Touch::INSTANTANEOUS_BUTTON_STATE lastButtonState = s_pad_instantaneous_state[touch_pin];
+    ESP32Touch::INSTANTANEOUS_BUTTON_STATE currentButtonState = getInstantaneousButtonState(touch_pin);
 
-    if(currentButtonState == PRESSED)
+    if(currentButtonState == ESP32Touch::PRESSED)
     {
-        if(lastButtonState == NOT_PRESSED)
+        if(lastButtonState == ESP32Touch::NOT_PRESSED)
         {
             s_pad_initial_press_time[touch_pin] = millis();
         }
-        else if(lastButtonState == PRESSED)
+        else if(lastButtonState == ESP32Touch::PRESSED)
         {
             long timeDiff = millis() - s_pad_initial_press_time[touch_pin];
-            if(timeDiff > BUTTON_THRESHOLD_TIMES_MS[LONG_PRESS])
+            if(timeDiff > BUTTON_THRESHOLD_TIMES_MS[ESP32Touch::LONG_PRESS])
             {
-                s_pad_state[touch_pin] = LONG_PRESSED;
+                s_pad_state[touch_pin] = ESP32Touch::LONG_PRESSED;
             }
-            else if(timeDiff > BUTTON_THRESHOLD_TIMES_MS[MEDIUM_PRESS])
+            else if(timeDiff > BUTTON_THRESHOLD_TIMES_MS[ESP32Touch::MEDIUM_PRESS])
             {
-                s_pad_state[touch_pin] = MEDIUM_PRESS;
+                s_pad_state[touch_pin] = ESP32Touch::MEDIUM_PRESSED;
             }
-            else if(timeDiff > BUTTON_THRESHOLD_TIMES_MS[SHORT_PRESS])
+            else if(timeDiff > BUTTON_THRESHOLD_TIMES_MS[ESP32Touch::SHORT_PRESS])
             {
-                s_pad_state[touch_pin] = SHORT_PRESS;
+                s_pad_state[touch_pin] = ESP32Touch::SHORT_PRESSED;
             }
         }
     }
@@ -151,7 +152,7 @@ void updateButtonState(const int touch_pin)
 void ESP32Touch::dispatch_callbacks(ESP32Touch* self) {
     for (int i=0; i<TOUCH_PAD_MAX; ++i) {
         if (s_pad_enabled[i]) {
-            updateButtonState(i);
+            self->updateButtonState(i);
             // bool new_button_state = s_pad_filtered_value[i] < s_pad_threshold[i];
             // Transition from off to on state detected.
             // The callbacks are only fired when a button state actually changes
