@@ -9,7 +9,7 @@
 #include <map>
 
 // Omit this line to disable debug print output
-#define ENABLE_DEBUG_PRINT 0
+#define ENABLE_DEBUG_PRINT 1
 #include "info_debug_error.h"
 
 /** @brief User callback function type */
@@ -65,7 +65,8 @@ public:
         NO_PRESS,
         SHORT_PRESSED,
         MEDIUM_PRESSED,
-        LONG_PRESSED
+        LONG_PRESSED,
+        NUM_STATES_DONT_USE
     };
 
     enum BUTTON_EVENT
@@ -103,7 +104,7 @@ public:
     void configure_input(const int input_number,
                          const uint8_t threshold_percent,
                          CallbackT callback = nullptr,
-                         BUTTON_EVENT = SHORT_PRESS);
+                         BUTTON_STATE = SHORT_PRESSED);
     
     
     /** @brief Force a sensor re-calibration.
@@ -134,8 +135,6 @@ private:
     // The ESP-IDF API threshold is not used in this code
     static constexpr int threshold_inactive = 0;
 
-    
-
     // FreeRTOS timer
     Ticker event_timer;
     // Static configuration and runtime state
@@ -149,7 +148,7 @@ private:
     static INSTANTANEOUS_BUTTON_STATE s_pad_instantaneous_state[TOUCH_PAD_MAX];
     static long s_pad_initial_press_time[TOUCH_PAD_MAX];
 
-    void getInstantaneousButtonState(const int touch_pin);
+    enum INSTANTANEOUS_BUTTON_STATE getInstantaneousButtonState(const int touch_pin);
     void updateButtonState(const int touch_pin);
 
     // Filter output reading hook, see ESP-IDF file touch_pad.h
