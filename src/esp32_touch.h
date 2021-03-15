@@ -76,9 +76,20 @@ public:
         LONG_PRESS
     };
 
+    // RISING means the state change will trigger the callback function
+    // when the button changes from not pressed to pressed. Falling means 
+    // callback will be triggered when the button changes from pressed to 
+    // not pressed. Using FALLING can be used to only have a single button 
+    // event triggered per button press.
+    enum TRIGGER_MODE
+    {
+        RISE,
+        FALL
+    };
+
     /** @brief Configure here the cycle time for the event loop/handler
      */
-    static constexpr int dispatch_cycle_time_ms = 100;
+    static constexpr int dispatch_cycle_time_ms = 50;
 
     /** @brief Configuration for the ESP-IDF API IIR filter, higher values mean
      *         more stable results, but also more time lag
@@ -87,6 +98,9 @@ public:
 
     ESP32Touch();
     virtual ~ESP32Touch();
+
+    void disableAllButtons();
+    void disableButton(const int input_number);
 
     /** @brief Configure input pin as a touch input, set threshold value and
      *         register the required user callback called when pin is touched.
@@ -104,7 +118,8 @@ public:
     void configure_input(const int input_number,
                          const uint8_t threshold_percent,
                          CallbackT callback = nullptr,
-                         BUTTON_STATE = SHORT_PRESSED);
+                         const  BUTTON_STATE = SHORT_PRESSED,
+                         const TRIGGER_MODE = RISE);
     
     
     /** @brief Force a sensor re-calibration.
@@ -125,11 +140,11 @@ public:
     /** @brief Call this periodicly to see the raw sensor readout values printed
      */
     void diagnostics();
-    std::map<BUTTON_EVENT, float> BUTTON_THRESHOLD_TIMES_MS
+    std::map<BUTTON_STATE, float> BUTTON_THRESHOLD_TIMES_MS
     {
-        {SHORT_PRESS, 50},
-        {MEDIUM_PRESS, 300},
-        {LONG_PRESS, 1500}
+        {SHORT_PRESSED, 50},
+        {MEDIUM_PRESSED, 300},
+        {LONG_PRESSED, 1500}
     };
 private:
     // The ESP-IDF API threshold is not used in this code
@@ -143,13 +158,16 @@ private:
     static bool s_pad_is_pressed[TOUCH_PAD_MAX];
     static uint16_t s_pad_filtered_value[TOUCH_PAD_MAX];
     static uint16_t s_pad_threshold[TOUCH_PAD_MAX];
-    static CallbackT s_pad_callback[TOUCH_PAD_MAX][sizeof(BUTTON_EVENT)];
+    static CallbackT s_pad_callback[TOUCH_PAD_MAX][NUM_STATES_DONT_USE];
     static BUTTON_STATE s_pad_state[TOUCH_PAD_MAX];
     static INSTANTANEOUS_BUTTON_STATE s_pad_instantaneous_state[TOUCH_PAD_MAX];
     static long s_pad_initial_press_time[TOUCH_PAD_MAX];
+    static TRIGGER_MODE s_pad_trigger_mode[TOUCH_PAD_MAX];
 
     enum INSTANTANEOUS_BUTTON_STATE getInstantaneousButtonState(const int touch_pin);
     void updateButtonState(const int touch_pin);
+    void initializeButtons();
+    void initializeButton(const int touch_pin);
 
     // Filter output reading hook, see ESP-IDF file touch_pad.h
     static void filter_read_cb(uint16_t *raw_value, uint16_t *filtered_value);
