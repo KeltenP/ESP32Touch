@@ -5,7 +5,7 @@
 
 #include <functional>
 #include <driver/touch_pad.h>
-#include <Ticker.h>
+#include <Ticker.h> // https://github.com/sstaub/Ticker.git
 #include <map>
 
 // Omit this line to disable debug print output
@@ -69,18 +69,12 @@ public:
         NUM_STATES_DONT_USE
     };
 
-    enum BUTTON_EVENT
-    {
-        SHORT_PRESS,
-        MEDIUM_PRESS,
-        LONG_PRESS
-    };
-
     // RISING means the state change will trigger the callback function
     // when the button changes from not pressed to pressed. Falling means 
     // callback will be triggered when the button changes from pressed to 
     // not pressed. Using FALLING can be used to only have a single button 
-    // event triggered per button press.
+    // event triggered per button press even if you have multiple button 
+    // states configured on a single touch pad.
     enum TRIGGER_MODE
     {
         RISE,
@@ -89,18 +83,21 @@ public:
 
     /** @brief Configure here the cycle time for the event loop/handler
      */
-    static constexpr int dispatch_cycle_time_ms = 50;
+    uint32_t dispatch_cycle_time_us = 50 * 1000;
 
     /** @brief Configuration for the ESP-IDF API IIR filter, higher values mean
      *         more stable results, but also more time lag
      */
-    static constexpr int filter_period = 10;
+    int filter_period = 10;
 
     ESP32Touch();
     virtual ~ESP32Touch();
 
     void disableAllButtons();
     void disableButton(const int input_number);
+
+    void disableEventTimer();
+    void enableEventTimer();
 
     /** @brief Configure input pin as a touch input, set threshold value and
      *         register the required user callback called when pin is touched.
@@ -118,7 +115,7 @@ public:
     void configure_input(const int input_number,
                          const uint8_t threshold_percent,
                          CallbackT callback = nullptr,
-                         const  BUTTON_STATE = SHORT_PRESSED,
+                         const BUTTON_STATE = SHORT_PRESSED,
                          const TRIGGER_MODE = RISE);
     
     
@@ -143,9 +140,10 @@ public:
     std::map<BUTTON_STATE, float> BUTTON_THRESHOLD_TIMES_MS
     {
         {SHORT_PRESSED, 50},
-        {MEDIUM_PRESSED, 300},
+        {MEDIUM_PRESSED, 500},
         {LONG_PRESSED, 1500}
     };
+
 private:
     // The ESP-IDF API threshold is not used in this code
     static constexpr int threshold_inactive = 0;
@@ -155,7 +153,6 @@ private:
     // Static configuration and runtime state
     static uint8_t s_pad_threshold_percent[TOUCH_PAD_MAX];
     static bool s_pad_enabled[TOUCH_PAD_MAX];
-    static bool s_pad_is_pressed[TOUCH_PAD_MAX];
     static uint16_t s_pad_filtered_value[TOUCH_PAD_MAX];
     static uint16_t s_pad_threshold[TOUCH_PAD_MAX];
     static CallbackT s_pad_callback[TOUCH_PAD_MAX][NUM_STATES_DONT_USE];
@@ -172,7 +169,7 @@ private:
     // Filter output reading hook, see ESP-IDF file touch_pad.h
     static void filter_read_cb(uint16_t *raw_value, uint16_t *filtered_value);
     // Event loop/handling function
-    static void dispatch_callbacks(ESP32Touch* self);
+    void dispatch_callbacks();
 }; // class ESP32Touch
 /** @example esp32_touch_example.cpp
  */
