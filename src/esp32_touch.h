@@ -83,7 +83,7 @@ public:
 
     /** @brief Configure here the cycle time for the event loop/handler
      */
-    uint32_t dispatch_cycle_time_us = 50 * 1000;
+    uint32_t dispatch_cycle_time_ms = 20;
 
     /** @brief Configuration for the ESP-IDF API IIR filter, higher values mean
      *         more stable results, but also more time lag
@@ -98,6 +98,7 @@ public:
 
     void disableEventTimer();
     void enableEventTimer();
+    void updateButtons();
 
     /** @brief Configure input pin as a touch input, set threshold value and
      *         register the required user callback called when pin is touched.
@@ -140,8 +141,8 @@ public:
     std::map<BUTTON_STATE, float> BUTTON_THRESHOLD_TIMES_MS
     {
         {SHORT_PRESSED, 50},
-        {MEDIUM_PRESSED, 500},
-        {LONG_PRESSED, 1500}
+        {MEDIUM_PRESSED, 300},
+        {LONG_PRESSED, 2000}
     };
 
 private:

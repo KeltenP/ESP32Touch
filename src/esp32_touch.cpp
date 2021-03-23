@@ -12,7 +12,7 @@
 //////// ESP32Touch public:
 
 ESP32Touch::ESP32Touch()
-    : event_timer(Ticker(&ESP32Touch::dispatch_callbacks, dispatch_cycle_time_us))
+    : event_timer{[this](){this->dispatch_callbacks();}, dispatch_cycle_time_ms, 0, MILLIS}
 {   
     // Initialize touch pad peripheral, it will start a timer to run a filter
     debug_print("Initializing touch pad");
@@ -41,6 +41,11 @@ void ESP32Touch::disableEventTimer()
 void ESP32Touch::enableEventTimer()
 {
     event_timer.start();
+}
+
+void ESP32Touch::updateButtons()
+{
+    event_timer.update();
 }
 
 void ESP32Touch::initializeButton(const int input_number)
