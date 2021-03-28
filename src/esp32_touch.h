@@ -112,12 +112,21 @@ public:
      *                 functions, static an non-static class or instance members
      *                 or C++11 lambda expressions.
      *                 The callback must have a signature of void(void).
+     * @param buttonState The state that the button must be in for the callback 
+           *              to be triggered.
+     * @param edgeTrigger Either RISE or FALL, determines if the callback should 
+     *                    be triggered on the rising or falling edge.
+     * @param waitForRelease Decide if a button should be released before the 
+     *                       callback becomes active. This prevents button 
+     *                       triggering if a button press causes button 
+     *                       behavior to change.
      */
     void configure_input(const int input_number,
                          const uint8_t threshold_percent,
                          CallbackT callback = nullptr,
-                         const BUTTON_STATE = SHORT_PRESSED,
-                         const TRIGGER_MODE = RISE);
+                         const BUTTON_STATE buttonState = SHORT_PRESSED,
+                         const TRIGGER_MODE edgeTrigger = RISE,
+                         const bool waitForRelease = true);
     
     
     /** @brief Force a sensor re-calibration.
@@ -138,13 +147,7 @@ public:
     /** @brief Call this periodicly to see the raw sensor readout values printed
      */
     void diagnostics();
-    std::map<BUTTON_STATE, float> BUTTON_THRESHOLD_TIMES_MS
-    {
-        {SHORT_PRESSED, 50},
-        {MEDIUM_PRESSED, 300},
-        {LONG_PRESSED, 2000}
-    };
-
+    
 private:
     // The ESP-IDF API threshold is not used in this code
     static constexpr int threshold_inactive = 0;
@@ -154,6 +157,7 @@ private:
     // Static configuration and runtime state
     static uint8_t s_pad_threshold_percent[TOUCH_PAD_MAX];
     static bool s_pad_enabled[TOUCH_PAD_MAX];
+    static bool s_pad_active[TOUCH_PAD_MAX][NUM_STATES_DONT_USE];
     static uint16_t s_pad_filtered_value[TOUCH_PAD_MAX];
     static uint16_t s_pad_threshold[TOUCH_PAD_MAX];
     static CallbackT s_pad_callback[TOUCH_PAD_MAX][NUM_STATES_DONT_USE];
@@ -166,6 +170,13 @@ private:
     void updateButtonState(const int touch_pin);
     void initializeButtons();
     void initializeButton(const int touch_pin);
+
+    std::map<BUTTON_STATE, float> BUTTON_THRESHOLD_TIMES_MS
+    {
+        {SHORT_PRESSED, 50},
+        {MEDIUM_PRESSED, 300},
+        {LONG_PRESSED, 2000}
+    };
 
     // Filter output reading hook, see ESP-IDF file touch_pad.h
     static void filter_read_cb(uint16_t *raw_value, uint16_t *filtered_value);
