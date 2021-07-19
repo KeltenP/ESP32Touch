@@ -100,6 +100,12 @@ public:
     void enableEventTimer();
     void updateButtons();
 
+    /** @brief Get the time in ms since the last callback function was triggered.
+     *         useful for detecting button inactivity. Will return -1 if a callback
+     *         has never been triggered.
+     */
+    long getTimeSinceLastCallback_ms();
+
     /** @brief Configure input pin as a touch input, set threshold value and
      *         register the required user callback called when pin is touched.
      * @param input_number Touch input pin number
@@ -154,6 +160,7 @@ private:
 
     // FreeRTOS timer
     Ticker event_timer;
+    unsigned long timeOfLastCallback_ms = 0;
     // Static configuration and runtime state
     static uint8_t s_pad_threshold_percent[TOUCH_PAD_MAX];
     static bool s_pad_enabled[TOUCH_PAD_MAX];

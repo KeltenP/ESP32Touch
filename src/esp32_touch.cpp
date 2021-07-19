@@ -15,7 +15,6 @@ ESP32Touch::ESP32Touch()
     : event_timer{[this](){this->dispatch_callbacks();}, dispatch_cycle_time_ms, 0, MILLIS}
 {   
     // Initialize touch pad peripheral, it will start a timer to run a filter
-    debug_print("Initializing touch pad");
     touch_pad_init();
     // If use interrupt trigger mode, should set touch sensor FSM mode at 'TOUCH_FSM_MODE_TIMER'.
     touch_pad_set_fsm_mode(TOUCH_FSM_MODE_TIMER);
@@ -212,6 +211,18 @@ void ESP32Touch::updateButtonState(const int touch_pin)
     s_pad_instantaneous_state[touch_pin] = currentButtonState;
 }
 
+long ESP32Touch::getTimeSinceLastCallback_ms()
+{
+    if(timeOfLastCallback_ms == 0)
+    {
+        return -1;
+    }
+    else
+    {
+        return millis() - timeOfLastCallback_ms;
+    }
+}
+
 void ESP32Touch::dispatch_callbacks() {
     for (int i=0; i<TOUCH_PAD_MAX; ++i) {
         if (s_pad_enabled[i]) {
@@ -227,6 +238,7 @@ void ESP32Touch::dispatch_callbacks() {
                         if (cb)
                         {
                             debug_print_sv("Dispatching rising callback for touch input no.: ", i);
+                            timeOfLastCallback_ms = millis();
                             cb();
                         }
                     }
@@ -239,6 +251,7 @@ void ESP32Touch::dispatch_callbacks() {
                         if (cb)
                         {
                             debug_print_sv("Dispatching falling callback for touch input no.: ", i);
+                            timeOfLastCallback_ms = millis();
                             cb();
                         }
                     }
